@@ -1,8 +1,31 @@
 import undetected_chromedriver as uc
 import time
 import json
+import sqlite3
 
 IS_HEADLESS=False
+db_path = "database.db"  # Path to your SQLite database
+
+def insert_into_explore(db_path, hashtag, category, playCount):
+    # Connect to the SQLite database
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # SQL query to insert the row
+    query = """
+    INSERT INTO explore (category, playCount, hashtag) 
+    VALUES (?, ?, ?)
+    """
+
+    # Execute the query with the provided data
+    try:
+        cursor.execute(query, (category, playCount, hashtag))
+        conn.commit()  # Commit the changes
+        print(f"Inserted: {hashtag} | {category} | {playCount}")
+    except sqlite3.IntegrityError:
+        print(f"Error: Hashtag '{hashtag}' already exists.")
+    finally:
+        conn.close()  # Close the database connection
 
 def get_new_driver():
     """
@@ -17,10 +40,11 @@ def get_new_driver():
 
 def parse_logs(driver, target_url):
         # keep checking for 10 secs until api request is intercepted
-        check_time = 5
+        check_time = 2
         wait_time_each_iter = 5
         response_json = None
         while check_time > 0:
+            check_time
             check_time -= 1
             time.sleep(wait_time_each_iter)
             logs_raw = driver.get_log("performance")
@@ -48,25 +72,38 @@ driver.get("https://www.tiktok.com/explore?lang=en-US")
 target_url='https://www.tiktok.com/api/explore/item_list/'
 
 # category buttons    
+time.sleep(10)
 categories=driver.find_elements('xpath','//div[@id="main-content-explore_page"]//button')
-for category in categories[1:]:
+for category in categories:
     driver.execute_script("arguments[0].click();", category)
     category.text
+    time.sleep(5)
     SCROLL_TIME=10
     WAIT_TIME=5
-    while SCROLL_TIME!=0:
+    while SCROLL_TIME>0:
         parsed_data=parse_logs(driver, target_url)
-        items=parsed_data['itemList']
-        # iterate through videos
-        for item in items:
-            playCount=item['stats']['playCount']
-            if 'contents' in item.keys():
-                contents=item['contents']
-                for content in contents:
-                    if 'textExtra' in content.keys():
-                        hashtags=content['textExtra']
-                playCount
-                [i['hashtagName'] for i in hashtags]
+        if parsed_data:
+            items=parsed_data['itemList']
+            # iterate through videos
+            for item in items:
+                playCount=item['stats']['playCount']
+                if 'contents' in item.keys():
+                    contents=item['contents']
+                    for content in contents:
+                        if 'textExtra' in content.keys():
+                            hashtags=content['textExtra']
+                    try:
+                        hashtags=[i['hashtagName'] for i in hashtags]
+                        for hashtag in hashtags:
+                            hashtag
+                            category.text
+                            playCount
+                            insert_into_explore(db_path, hashtag, category.text, playCount)
+                    except:
+                        hashtags
+
+        else:
+            SCROLL_TIME-=5
         SCROLL_TIME-=1
         #scroll to bottom of page 
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
