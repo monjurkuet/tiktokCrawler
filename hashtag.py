@@ -41,7 +41,6 @@ def get_all_hashtags(db_path):
     hashtag_list = [tag[0] for tag in hashtags if tag[0]]
     return hashtag_list
 
-
 def get_new_driver():
     """
     Instantiate a new chrome driver with headless options
@@ -55,8 +54,8 @@ def get_new_driver():
 
 def parse_logs(driver, target_url):
         # keep checking for 10 secs until api request is intercepted
-        check_time = 2
-        wait_time_each_iter = 5
+        check_time = 10
+        wait_time_each_iter = 1.5
         response_json = None
         while check_time > 0:
             check_time
@@ -81,19 +80,27 @@ def parse_logs(driver, target_url):
                 print('Checking network logs.....')
         return response_json
 
-driver=get_new_driver()
-driver.get("https://www.tiktok.com/explore?lang=en-US")
-
 target_url='https://www.tiktok.com/api/challenge/detail'
 hashtag_base_url='https://www.tiktok.com/tag/'
 hashtags = get_all_hashtags(db_path)
 
+driver=get_new_driver()
+
+driver_counter=0
 for hashtag in hashtags:
+    driver_counter+=1
+    if driver_counter>100:
+        driver_counter=0
+        driver.quit()
+        driver=get_new_driver()
+        time.sleep(4)
     driver.get(hashtag_base_url+hashtag)
-    time.sleep(random.uniform(5,10))
+    time.sleep(random.uniform(0,3))
     parsed_data=parse_logs(driver, target_url)
     try:
         videoCount=parsed_data['challengeInfo']['statsV2']['videoCount']
         insert_into_hashtagdata(db_path, hashtag, videoCount)
     except Exception as e:
         print(e)
+
+driver.quit()
